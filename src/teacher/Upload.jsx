@@ -10,7 +10,7 @@ const ROLES = [
   ['answer', '예시답안 · 정답', '선택'],
   ['commentary', '해설 · 채점기준', '선택 · 선행학습 영향평가 보고서 등']
 ];
-const ACCEPT = '.hwp,.hwpx,.pdf,.png,.jpg,.jpeg,.webp,.txt';
+const ACCEPT = '.hwp,.hwpx,.docx,.pdf,.png,.jpg,.jpeg,.webp,.txt';
 
 export default function Upload({ kind, onDraft }) {
   const own = kind === '자체';

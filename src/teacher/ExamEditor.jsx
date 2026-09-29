@@ -121,7 +121,9 @@ export default function ExamEditor({ examId, draft, onClose }) {
         <div key={i} className="card q-edit">
           <div className="form-grid q-grid">
             <label>번호<input value={q.no} onChange={(e) => setQ(i, 'no', e.target.value)} /></label>
-            <label>유형<select value={q.qtype} onChange={(e) => setQ(i, 'qtype', e.target.value)}><option>인문</option><option>수리</option><option>자료해석</option></select></label>
+            <label>유형<select value={q.qtype} onChange={(e) => setQ(i, 'qtype', e.target.value)}>
+              {[...new Set(['인문', '수리', '자료해석', '단답형', '단문형', '선택형', q.qtype].filter(Boolean))].map((t) => <option key={t}>{t}</option>)}
+            </select></label>
             <label>배점 *<input value={q.points ?? ''} onChange={(e) => setQ(i, 'points', e.target.value)} inputMode="decimal" /></label>
             <label>분량 조건<input value={q.lengthRule} onChange={(e) => setQ(i, 'lengthRule', e.target.value)} placeholder="예: 600±60자" /></label>
             <label>최소 자<input value={q.minChars ?? ''} onChange={(e) => setQ(i, 'minChars', e.target.value)} inputMode="numeric" /></label>

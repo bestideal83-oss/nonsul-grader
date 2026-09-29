@@ -2,11 +2,13 @@
 import { useEffect, useState } from 'react';
 import { rpc } from '../api.js';
 import { fmtDate, examTypeLabel } from '../lib/util.js';
+import BulkImport from './BulkImport.jsx';
 
 export default function Exams({ onEdit, onNew }) {
   const [rows, setRows] = useState(null);
   const [err, setErr] = useState('');
   const [kind, setKind] = useState('');
+  const [bulk, setBulk] = useState(false);
 
   const load = () => rpc('t_exams').then(setRows).catch((e) => setErr(e.message));
   useEffect(() => { load(); }, []);
@@ -30,9 +32,11 @@ export default function Exams({ onEdit, onNew }) {
           ))}
         </div>
         <div className="grow" />
+        <button className="btn primary" onClick={() => setBulk(!bulk)}>파일로 한꺼번에 가져오기</button>
         <button className="btn" onClick={() => onNew('기출')}>+ 기출 직접 입력</button>
         <button className="btn" onClick={() => onNew('자체')}>+ 자체 모의 직접 입력</button>
       </div>
+      {bulk && <BulkImport existing={rows} onDone={load} onClose={() => setBulk(false)} />}
       {err && <div className="alert err">{err}</div>}
       {!rows && !err && <div className="muted pad">불러오는 중…</div>}
       {rows && (

@@ -131,7 +131,8 @@ const numOrNull = (v) => { if (v === '' || v === null || v === undefined) return
 const s = (v) => (v === null || v === undefined ? '' : String(v));
 
 /** Claude가 만든 시험 JSON → 편집 화면 초안 */
-export function examJsonToDraft(obj, kind, meta) {
+export function examJsonToDraft(obj, kind, meta = {}) {
+  if (!kind) kind = /자체/.test(s(obj.구분) + s(obj.유형)) ? '자체' : '기출';
   const qs = Array.isArray(obj.문항 || obj.questions) ? (obj.문항 || obj.questions) : [];
   const questions = qs.map((q, i) => ({
     no: s(q.번호 ?? q.no) || String(i + 1), qtype: s(q.문항유형 ?? q.qtype) || '인문', prompt: s(q.논제 ?? q.prompt),
@@ -149,7 +150,7 @@ export function examJsonToDraft(obj, kind, meta) {
   return {
     id: '', kind: kind === '자체' ? '자체' : '기출',
     univ: meta.univ || s(obj.대학), year: meta.year || s(obj.연도), type: kind === '자체' ? '자체모의논술' : (meta.type || s(obj.유형) || '논술고사'),
-    track: meta.track || s(obj.계열), title: meta.title || '',
+    track: meta.track || s(obj.계열), title: meta.title || s(obj.제목),
     minutes: Number(meta.minutes) || Number(obj.시간) || '', notice: s(obj.안내문), passage: s(obj.제시문), overall: s(obj.총평해설),
     pdfId: '', questions, warnings, published: false
   };
@@ -159,4 +160,17 @@ export function pickExamJson(list) {
   const hit = list.find((o) => o && (o.format === EXAM_FILE_FORMAT || Array.isArray(o.문항) || Array.isArray(o.questions)));
   if (!hit) throw new Error('시험 등록 결과(JSON)가 아닙니다. "문항" 목록이 있는 JSON을 넣어 주세요.');
   return hit;
+}
+
+/** 여러 시험 JSON(파일 여러 개, 배열, {exams:[...]} 묶음)을 시험 목록으로 */
+export function collectExamJsons(docs) {
+  const out = [];
+  const visit = (o) => {
+    if (!o || typeof o !== 'object') return;
+    if (Array.isArray(o)) { o.forEach(visit); return; }
+    if (Array.isArray(o.exams) || Array.isArray(o.시험)) { (o.exams || o.시험).forEach(visit); return; }
+    if (Array.isArray(o.문항) || Array.isArray(o.questions)) out.push(o);
+  };
+  docs.forEach(visit);
+  return out;
 }

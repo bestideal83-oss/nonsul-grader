@@ -10,6 +10,7 @@ export function fileKind(name, type) {
   const n = String(name).toLowerCase();
   if (n.endsWith('.hwp')) return 'hwp';
   if (n.endsWith('.hwpx')) return 'hwpx';
+  if (n.endsWith('.docx')) return 'docx';
   if (n.endsWith('.pdf') || type === 'application/pdf') return 'pdf';
   if (/\.(png|jpe?g|webp|gif)$/.test(n) || /^image\//.test(type || '')) return 'image';
   if (/\.(txt|md)$/.test(n)) return 'txt';
@@ -167,6 +168,52 @@ export async function hwpxToText(arrayBuffer) {
   return tidy(out);
 }
 
+/* ======================== DOCX (워드) ======================== */
+export async function docxToText(arrayBuffer) {
+  const zip = await JSZip.loadAsync(arrayBuffer);
+  const f = zip.file('word/document.xml');
+  if (!f) throw new Error('워드(.docx) 본문을 찾지 못했습니다.');
+  const doc = new DOMParser().parseFromString(await f.async('string'), 'application/xml');
+  const kids = (el, name) => Array.from(el.childNodes).filter((c) => c.nodeType === 1 && c.localName === name);
+  const paraText = (p) => {
+    let t = '';
+    const walk = (n) => {
+      for (const c of n.childNodes) {
+        if (c.nodeType !== 1) continue;
+        const k = c.localName;
+        if (k === 't') t += c.textContent;
+        else if (k === 'tab') t += '\t';
+        else if (k === 'br' || k === 'cr') t += '\n';
+        else if (k === 'drawing' || k === 'pict') t += '[그림]';
+        else if (k === 'oMath' || k === 'oMathPara') t += c.textContent;
+        else if (k !== 'pPr' && k !== 'rPr') walk(c);
+      }
+    };
+    walk(p);
+    return t;
+  };
+  const cellText = (tc) => blocks(tc).join(' / ').replace(/\n/g, ' / ');
+  const table = (tbl) => {
+    const rows = kids(tbl, 'tr').map((tr) => kids(tr, 'tc').map(cellText));
+    if (rows.length === 1 && rows[0].length === 1) return [blocks(kids(kids(tbl, 'tr')[0], 'tc')[0]).join('\n')];
+    const w = Math.max(...rows.map((r) => r.length));
+    const line = (r) => '| ' + [...r, ...Array(w - r.length).fill('')].map((c) => c.replace(/\|/g, '｜')).join(' | ') + ' |';
+    return [[line(rows[0]), '|' + '---|'.repeat(w), ...rows.slice(1).map(line)].join('\n')];
+  };
+  const blocks = (el) => {
+    const out = [];
+    for (const c of el.childNodes) {
+      if (c.nodeType !== 1) continue;
+      if (c.localName === 'p') { const t = paraText(c); if (t.trim()) out.push(t); }
+      else if (c.localName === 'tbl') out.push(...table(c));
+      else if (c.localName === 'sdt') { const sc = kids(c, 'sdtContent')[0]; if (sc) out.push(...blocks(sc)); }
+    }
+    return out;
+  };
+  const body = doc.getElementsByTagNameNS('*', 'body')[0];
+  return tidy(blocks(body).join('\n'));
+}
+
 function tidy(s) {
   return s.replace(/\r/g, '').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
 }
@@ -176,8 +223,9 @@ export async function readForAI(file) {
   const k = fileKind(file.name, file.type);
   if (k === 'hwp') return { kind: 'text', text: hwpToText(await file.arrayBuffer()) };
   if (k === 'hwpx') return { kind: 'text', text: await hwpxToText(await file.arrayBuffer()) };
+  if (k === 'docx') return { kind: 'text', text: await docxToText(await file.arrayBuffer()) };
   if (k === 'txt') return { kind: 'text', text: await file.text() };
   if (k === 'pdf') return { kind: 'pdf', mime: 'application/pdf' };
   if (k === 'image') return { kind: 'image', mime: imageMime(file.name, file.type) };
-  throw new Error('지원하지 않는 파일 형식입니다: ' + file.name + ' (HWP, HWPX, PDF, 이미지, TXT)');
+  throw new Error('지원하지 않는 파일 형식입니다: ' + file.name + ' (HWP, HWPX, DOCX, PDF, 이미지, TXT)');
 }

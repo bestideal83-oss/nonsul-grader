@@ -250,3 +250,4 @@ label { display: flex; flex-direction: column; gap: 4px; font-size: .9rem; color
 .file-grading h3 .small { font-weight: 400; margin-left: 6px; }
 .waiting b { display: block; font-size: 1.1rem; margin-bottom: 4px; }
 .big-emoji { font-size: 2.2rem; margin-bottom: 6px; }
+.bulk { border-color: #9cc0f5; }
