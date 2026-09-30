@@ -384,7 +384,7 @@ async function gradeCore(a) {
   const res = qs.map((q, i) => {
     const ans = str(answers[q.no]);
     const len = countChars(ans);
-    if (len.noSpace < 10) return emptyGrade(q, len);
+    if (len.noSpace === 0) return emptyGrade(q, len);
     reqs.push(gradeRequest(e, q, ans, len, pdfPart));
     idx.push(i);
     return null;
@@ -510,11 +510,12 @@ async function t_export(token, examId) {
 
 /* ============================== 교사: 파일로 채점(Claude 대화창) ============================== */
 /** 채점 대기 답안을 시험별로 묶어 보냄(학생 이름은 빼고 응시 코드만) */
-async function t_gradingExport(token, examId) {
+async function t_gradingExport(token, examId, includeDone) {
   await asTeacher(token);
   const all = await db().list('attempts');
   await finalizeExpired(all);
-  const todo = all.filter((a) => ['pending', 'error', 'grading'].includes(a.status) && (!examId || a.examId === examId))
+  const states = includeDone ? ['pending', 'error', 'grading', 'done'] : ['pending', 'error', 'grading'];
+  const todo = all.filter((a) => states.includes(a.status) && (!examId || a.examId === examId))
     .sort((x, y) => x.startedAt - y.startedAt);
   const groups = new Map();
   for (const a of todo) {
@@ -562,7 +563,7 @@ async function t_gradingImport(token, docs, overwrite) {
       for (const q of e.questions || []) {
         const ans = str((a.answers || {})[q.no]);
         const len = countChars(ans);
-        if (len.noSpace < 10) { qs.push(emptyGrade(q, len)); continue; }
+        if (len.noSpace === 0) { qs.push(emptyGrade(q, len)); continue; }
         const x = byNo[normNo(q.no)];
         if (!x) { missing.push(q.no); continue; }
         qs.push(normalizeGrade(q, x, len));

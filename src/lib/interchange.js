@@ -71,7 +71,7 @@ export function buildGradingMd(group, part, parts) {
       const ans = a.answers[q.no] || '';
       const c = countChars(ans);
       L.push(`#### 문항 ${q.no} (공백 포함 ${c.withSpace}자, 공백 제외 ${c.noSpace}자)`);
-      if (c.noSpace < 10) { L.push('(미작성)'); continue; }
+      if (c.noSpace === 0) { L.push('(미작성)'); continue; }
       L.push('<학생답안>');
       L.push(ans);
       L.push('</학생답안>');

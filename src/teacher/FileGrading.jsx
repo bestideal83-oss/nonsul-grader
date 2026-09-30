@@ -10,12 +10,13 @@ export default function FileGrading({ examId, pending, onDone }) {
   const [files, setFiles] = useState([]);
   const [paste, setPaste] = useState('');
   const [overwrite, setOverwrite] = useState(false);
+  const [redo, setRedo] = useState(false);
   const [report, setReport] = useState(null);
 
   const doExport = async () => {
     setBusy(true); setMsg(''); setReport(null);
     try {
-      const groups = await rpc('t_gradingExport', examId || '');
+      const groups = await rpc('t_gradingExport', examId || '', redo);
       const n = Number(size) || 9999;
       const out = [];
       for (const g of groups) {
@@ -25,7 +26,7 @@ export default function FileGrading({ examId, pending, onDone }) {
           out.push({ name: `채점요청_${safeName(g.exam.fullTitle)}${parts > 1 ? `_${i + 1}of${parts}` : ''}.md`, text: buildGradingMd(part, i + 1, parts) });
         }
       }
-      if (!out.length) { setMsg('채점을 기다리는 답안이 없습니다.'); setBusy(false); onDone && onDone(); return; }
+      if (!out.length) { setMsg(redo ? '내보낼 답안이 없습니다.' : '채점을 기다리는 답안이 없습니다. 이미 채점된 답안을 다시 채점하려면 "채점된 답안도 다시 채점"을 켜세요.'); setBusy(false); onDone && onDone(); return; }
       if (out.length === 1) downloadText(out[0].name, out[0].text);
       else {
         const JSZip = (await import('jszip')).default;
@@ -68,6 +69,7 @@ export default function FileGrading({ examId, pending, onDone }) {
               </select>
             </label>
             <button className="btn primary" onClick={doExport} disabled={busy}>채점용 파일 내보내기</button>
+            <label className="check m0"><input type="checkbox" checked={redo} onChange={(e) => { setRedo(e.target.checked); if (e.target.checked) setOverwrite(true); }} /> 채점된 답안도 다시 채점{examId ? '' : ' (위에서 시험을 고르면 그 시험만)'}</label>
           </div>
         </li>
         <li><b>Claude 대화창에서 채점</b> — 받은 파일을 claude.ai 대화창에 올리고 <code>이 파일대로 채점해 줘</code>라고 합니다. 답안이 길면 한 파일에 5~10명씩이 안전합니다.</li>
